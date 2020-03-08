@@ -123,12 +123,31 @@ int GetCaptureId()
         return 3;
     }
 
+    std::cout << "Default device id: " << deviceId << std::endl;
+    CoTaskMemFree(deviceId);
+
+    IAudioEndpointVolume* endpointVolume = NULL;
+    hr = defaultDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume);
     defaultDevice->Release();
     defaultDevice = NULL;
 
-    std::cout << "Default device id: " << deviceId;
+    BOOL isMuted;
+    hr = endpointVolume->GetMute(&isMuted);
+    if (FAILED(hr)) {
+        std::cout << "GetId failed, hr = " << std::hex << hr;
+        return 4;
+    }
 
-    CoTaskMemFree(deviceId);
+    std::cout << "Is muted? " << isMuted << std::endl;
+
+    hr = endpointVolume->SetMute(!isMuted, NULL);
+    if (FAILED(hr)) {
+        std::cout << "SetMute failed, hr = " << std::hex << hr;
+        return 5;
+    }
+
+    endpointVolume->Release();
+    endpointVolume = NULL;
 
     return 0;
 }
