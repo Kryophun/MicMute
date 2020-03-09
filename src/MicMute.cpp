@@ -6,21 +6,21 @@
 #include <windows.h>
 #include <mmdeviceapi.h>
 #include <endpointvolume.h>
-#include <Functiondiscoverykeys_devpkey.h>
 #include <atlbase.h>
-#include <wil\resource.h>
+#include <wil\Result.h>
 #include "MicMute.h"
 
-#define EXIT_ON_ERROR(hres)  \
-              if (FAILED(hres)) { goto Exit; }
-#define SAFE_RELEASE(punk)  \
-              if ((punk) != NULL)  \
-                { (punk)->Release(); (punk) = NULL; }
+// Perhaps this will be helpful in the future
 
+//#define EXIT_ON_ERROR(hres)  \
+//              if (FAILED(hres)) { goto Exit; }
+//#define SAFE_RELEASE(punk)  \
+//              if ((punk) != NULL)  \
+//                { (punk)->Release(); (punk) = NULL; }
+//
 //const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 //const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 
-// Perhaps this will be helpful in the future
 //void PrintEndpointNames()
 //{
 //    HRESULT hr = S_OK;
@@ -119,73 +119,41 @@
 //        SAFE_RELEASE(pProps)
 //}
 
-void ExitWithErrorIfFailed(HRESULT hr, std::wstring errorMessage)
+void ToggleMuteOnDefaultCaptureDevice()
 {
-    if (FAILED(hr)) {
-        std::cout << errorMessage.c_str() << ", HRESULT = " << std::hex << hr;
-        std::exit(1);
-    }
-}
-
-int ToggleMuteOnDefaultCaptureDevice()
-{
-    HRESULT hr;
-
     CComPtr<IMMDeviceEnumerator> deviceEnumerator;
-    hr = deviceEnumerator.CoCreateInstance(__uuidof(MMDeviceEnumerator));
-    ExitWithErrorIfFailed(hr, L"CoCreateInstance failed");
+    THROW_IF_FAILED_MSG(deviceEnumerator.CoCreateInstance(__uuidof(MMDeviceEnumerator)), "Could not create device enumerator");
 
     CComPtr<IMMDevice> defaultDevice;
-    hr = deviceEnumerator->GetDefaultAudioEndpoint(eCapture, eConsole, &defaultDevice);
-    ExitWithErrorIfFailed(hr, L"GetDefaultAudioEndpoint failed");
-
-    WCHAR* deviceId;
-    hr = defaultDevice->GetId(&deviceId);
-    ExitWithErrorIfFailed(hr, L"GetId failed");
-    std::cout << "Default device id: " << deviceId << std::endl;
-    CoTaskMemFree(deviceId);
+    THROW_IF_FAILED_MSG(deviceEnumerator->GetDefaultAudioEndpoint(eCapture, eConsole, &defaultDevice), "Could not get default audio capture endpoint");
 
     CComPtr<IAudioEndpointVolume> endpointVolume;
-    hr = defaultDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume);
-    ExitWithErrorIfFailed(hr, L"Getting IAudioEndpointVolume failed");
+    THROW_IF_FAILED_MSG(defaultDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume), "Could not get audio endpoint volume");
 
     BOOL isMuted;
-    hr = endpointVolume->GetMute(&isMuted);
-    ExitWithErrorIfFailed(hr, L"GetMute failed");
+    THROW_IF_FAILED_MSG(endpointVolume->GetMute(&isMuted), "Could not get mute state of audio endpoint");
 
-    std::cout << "Is muted? " << isMuted << std::endl;
+    std::cout << "Device is currently " << (isMuted ? "muted. Turning mute off..." : "NOT muted. Muting device...") << std::endl;
 
-    hr = endpointVolume->SetMute(!isMuted, NULL);
-    ExitWithErrorIfFailed(hr, L"SetMute failed");
-
-    return 0;
+    THROW_IF_FAILED_MSG(endpointVolume->SetMute(!isMuted, NULL), "Could not set mute state");
 }
 
 int main()
 {
     std::cout << "Hello World!\n";
+    int returnCode = 0;
 
-    HRESULT hr;
-    hr = CoInitialize(NULL);
-    if (FAILED(hr)) {
-        std::cout << "CoInitialize failed, hr = " << std::hex << hr;
-        return 1;
+    try {
+        THROW_IF_FAILED_MSG(CoInitialize(NULL), "CoInitialize Failed");
+        ToggleMuteOnDefaultCaptureDevice();
     }
-
-    ToggleMuteOnDefaultCaptureDevice();
+    catch (wil::ResultException& e) {
+        const wil::FailureInfo failure = e.GetFailureInfo();
+        std::cout << "An error occurred: (" << std::hex << failure.hr << "), message = " << failure.pszMessage << std::endl;
+        returnCode = 1;
+    }
 
     CoUninitialize();
 
-    return 0;
+    return returnCode;
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
