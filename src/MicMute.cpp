@@ -7,6 +7,8 @@
 #include <mmdeviceapi.h>
 #include <endpointvolume.h>
 #include <Functiondiscoverykeys_devpkey.h>
+#include <atlbase.h>
+#include <wil\resource.h>
 #include "MicMute.h"
 
 #define EXIT_ON_ERROR(hres)  \
@@ -75,6 +77,28 @@ void PrintEndpointNames()
             printf("Endpoint %d: \"%S\" (%S)\n",
                 i, varName.pwszVal, pwszID);
 
+        if (wcsstr(varName.bstrVal, L"C615") != NULL)
+        {
+            printf("HUZZAH!!");
+            CComPtr<IAudioEndpointVolume> endpointVolume;
+            hr = pEndpoint->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume);
+
+            BOOL isMuted;
+            hr = endpointVolume->GetMute(&isMuted);
+            if (FAILED(hr)) {
+                std::cout << "GetId failed, hr = " << std::hex << hr;
+                return;
+            }
+
+            std::cout << "Is muted? " << isMuted << std::endl;
+
+            hr = endpointVolume->SetMute(!isMuted, NULL);
+            if (FAILED(hr)) {
+                std::cout << "SetMute failed, hr = " << std::hex << hr;
+                return;
+            }
+        }
+
         CoTaskMemFree(pwszID);
         pwszID = NULL;
         PropVariantClear(&varName);
@@ -98,19 +122,15 @@ int GetCaptureId()
 {
     HRESULT hr;
 
-    IMMDeviceEnumerator* deviceEnumerator = NULL;
-    hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_INPROC_SERVER, __uuidof(IMMDeviceEnumerator), (LPVOID*)&deviceEnumerator);
+    CComPtr<IMMDeviceEnumerator> deviceEnumerator;
+    hr = deviceEnumerator.CoCreateInstance(__uuidof(MMDeviceEnumerator));
     if (FAILED(hr)) {
         std::cout << "CoCreateInstance failed, hr = " << std::hex << hr;
         return 1;
     }
 
-    IMMDevice* defaultDevice = NULL;
-
+    CComPtr<IMMDevice> defaultDevice;
     hr = deviceEnumerator->GetDefaultAudioEndpoint(eCapture, eConsole, &defaultDevice);
-    deviceEnumerator->Release();
-    deviceEnumerator = NULL;
-
     if (FAILED(hr)) {
         std::cout << "GetDefaultAudioEndpoint failed, hr = " << std::hex << hr;
         return 2;
@@ -126,10 +146,8 @@ int GetCaptureId()
     std::cout << "Default device id: " << deviceId << std::endl;
     CoTaskMemFree(deviceId);
 
-    IAudioEndpointVolume* endpointVolume = NULL;
+    CComPtr<IAudioEndpointVolume> endpointVolume;
     hr = defaultDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume);
-    defaultDevice->Release();
-    defaultDevice = NULL;
 
     BOOL isMuted;
     hr = endpointVolume->GetMute(&isMuted);
@@ -146,9 +164,6 @@ int GetCaptureId()
         return 5;
     }
 
-    endpointVolume->Release();
-    endpointVolume = NULL;
-
     return 0;
 }
 
@@ -162,8 +177,9 @@ int main()
         std::cout << "CoInitialize failed, hr = " << std::hex << hr;
         return 1;
     }
-    // PrintEndpointNames();
-    GetCaptureId();
+
+    PrintEndpointNames();
+    // GetCaptureId();
 
     CoUninitialize();
 
