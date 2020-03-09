@@ -2,13 +2,51 @@
 //
 
 #include <iostream>
-#include <stdio.h>
 #include <windows.h>
 #include <mmdeviceapi.h>
 #include <endpointvolume.h>
 #include <atlbase.h>
 #include <wil\Result.h>
 #include "MicMute.h"
+
+void ToggleMuteOnDefaultCaptureDevice()
+{
+    CComPtr<IMMDeviceEnumerator> deviceEnumerator;
+    THROW_IF_FAILED_MSG(deviceEnumerator.CoCreateInstance(__uuidof(MMDeviceEnumerator)), "Could not create device enumerator");
+
+    CComPtr<IMMDevice> defaultDevice;
+    THROW_IF_FAILED_MSG(deviceEnumerator->GetDefaultAudioEndpoint(eCapture, eConsole, &defaultDevice), "Could not get default audio capture endpoint");
+
+    CComPtr<IAudioEndpointVolume> endpointVolume;
+    THROW_IF_FAILED_MSG(defaultDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume), "Could not get audio endpoint volume");
+
+    BOOL isMuted;
+    THROW_IF_FAILED_MSG(endpointVolume->GetMute(&isMuted), "Could not get mute state of audio endpoint");
+
+    std::cout << "Device is currently " << (isMuted ? "muted. Turning mute off..." : "NOT muted. Muting device...") << std::endl;
+
+    THROW_IF_FAILED_MSG(endpointVolume->SetMute(!isMuted, NULL), "Could not set mute state");
+}
+
+int main()
+{
+    std::cout << "Hello World!\n";
+    int returnCode = 0;
+
+    try {
+        THROW_IF_FAILED_MSG(CoInitialize(NULL), "CoInitialize Failed");
+        ToggleMuteOnDefaultCaptureDevice();
+    }
+    catch (wil::ResultException& e) {
+        const wil::FailureInfo failure = e.GetFailureInfo();
+        std::cout << "An error occurred: (" << std::hex << failure.hr << "), message = " << failure.pszMessage << std::endl;
+        returnCode = 1;
+    }
+
+    CoUninitialize();
+
+    return returnCode;
+}
 
 // Perhaps this will be helpful in the future
 
@@ -118,42 +156,3 @@
 //        SAFE_RELEASE(pEndpoint)
 //        SAFE_RELEASE(pProps)
 //}
-
-void ToggleMuteOnDefaultCaptureDevice()
-{
-    CComPtr<IMMDeviceEnumerator> deviceEnumerator;
-    THROW_IF_FAILED_MSG(deviceEnumerator.CoCreateInstance(__uuidof(MMDeviceEnumerator)), "Could not create device enumerator");
-
-    CComPtr<IMMDevice> defaultDevice;
-    THROW_IF_FAILED_MSG(deviceEnumerator->GetDefaultAudioEndpoint(eCapture, eConsole, &defaultDevice), "Could not get default audio capture endpoint");
-
-    CComPtr<IAudioEndpointVolume> endpointVolume;
-    THROW_IF_FAILED_MSG(defaultDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume), "Could not get audio endpoint volume");
-
-    BOOL isMuted;
-    THROW_IF_FAILED_MSG(endpointVolume->GetMute(&isMuted), "Could not get mute state of audio endpoint");
-
-    std::cout << "Device is currently " << (isMuted ? "muted. Turning mute off..." : "NOT muted. Muting device...") << std::endl;
-
-    THROW_IF_FAILED_MSG(endpointVolume->SetMute(!isMuted, NULL), "Could not set mute state");
-}
-
-int main()
-{
-    std::cout << "Hello World!\n";
-    int returnCode = 0;
-
-    try {
-        THROW_IF_FAILED_MSG(CoInitialize(NULL), "CoInitialize Failed");
-        ToggleMuteOnDefaultCaptureDevice();
-    }
-    catch (wil::ResultException& e) {
-        const wil::FailureInfo failure = e.GetFailureInfo();
-        std::cout << "An error occurred: (" << std::hex << failure.hr << "), message = " << failure.pszMessage << std::endl;
-        returnCode = 1;
-    }
-
-    CoUninitialize();
-
-    return returnCode;
-}
