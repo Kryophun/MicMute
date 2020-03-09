@@ -17,152 +17,146 @@
               if ((punk) != NULL)  \
                 { (punk)->Release(); (punk) = NULL; }
 
-const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
-const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+//const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
+//const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 
-void PrintEndpointNames()
+// Perhaps this will be helpful in the future
+//void PrintEndpointNames()
+//{
+//    HRESULT hr = S_OK;
+//    IMMDeviceEnumerator* pEnumerator = NULL;
+//    IMMDeviceCollection* pCollection = NULL;
+//    IMMDevice* pEndpoint = NULL;
+//    IPropertyStore* pProps = NULL;
+//    LPWSTR pwszID = NULL;
+//
+//    hr = CoCreateInstance(
+//        CLSID_MMDeviceEnumerator, NULL,
+//        CLSCTX_ALL, IID_IMMDeviceEnumerator,
+//        (void**)&pEnumerator);
+//    EXIT_ON_ERROR(hr)
+//
+//        hr = pEnumerator->EnumAudioEndpoints(
+//            eCapture, DEVICE_STATE_ACTIVE,
+//            &pCollection);
+//    EXIT_ON_ERROR(hr)
+//
+//        UINT  count;
+//    hr = pCollection->GetCount(&count);
+//    EXIT_ON_ERROR(hr)
+//
+//        if (count == 0)
+//        {
+//            printf("No endpoints found.\n");
+//        }
+//
+//    // Each loop prints the name of an endpoint device.
+//    for (ULONG i = 0; i < count; i++)
+//    {
+//        // Get pointer to endpoint number i.
+//        hr = pCollection->Item(i, &pEndpoint);
+//        EXIT_ON_ERROR(hr)
+//
+//            // Get the endpoint ID string.
+//            hr = pEndpoint->GetId(&pwszID);
+//        EXIT_ON_ERROR(hr)
+//
+//            hr = pEndpoint->OpenPropertyStore(
+//                STGM_READ, &pProps);
+//        EXIT_ON_ERROR(hr)
+//
+//            PROPVARIANT varName;
+//        // Initialize container for property value.
+//        PropVariantInit(&varName);
+//
+//        // Get the endpoint's friendly-name property.
+//        hr = pProps->GetValue(
+//            PKEY_Device_FriendlyName, &varName);
+//        EXIT_ON_ERROR(hr)
+//
+//            // Print endpoint friendly name and endpoint ID.
+//            printf("Endpoint %d: \"%S\" (%S)\n",
+//                i, varName.pwszVal, pwszID);
+//
+//        if (wcsstr(varName.bstrVal, L"C615") != NULL)
+//        {
+//            printf("HUZZAH!!");
+//            CComPtr<IAudioEndpointVolume> endpointVolume;
+//            hr = pEndpoint->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume);
+//
+//            BOOL isMuted;
+//            hr = endpointVolume->GetMute(&isMuted);
+//            if (FAILED(hr)) {
+//                std::cout << "GetId failed, hr = " << std::hex << hr;
+//                return;
+//            }
+//
+//            std::cout << "Is muted? " << isMuted << std::endl;
+//
+//            hr = endpointVolume->SetMute(!isMuted, NULL);
+//            if (FAILED(hr)) {
+//                std::cout << "SetMute failed, hr = " << std::hex << hr;
+//                return;
+//            }
+//        }
+//
+//        CoTaskMemFree(pwszID);
+//        pwszID = NULL;
+//        PropVariantClear(&varName);
+//        SAFE_RELEASE(pProps)
+//            SAFE_RELEASE(pEndpoint)
+//    }
+//    SAFE_RELEASE(pEnumerator)
+//        SAFE_RELEASE(pCollection)
+//        return;
+//
+//Exit:
+//    printf("Error!\n");
+//    CoTaskMemFree(pwszID);
+//    SAFE_RELEASE(pEnumerator)
+//        SAFE_RELEASE(pCollection)
+//        SAFE_RELEASE(pEndpoint)
+//        SAFE_RELEASE(pProps)
+//}
+
+void ExitWithErrorIfFailed(HRESULT hr, std::wstring errorMessage)
 {
-    HRESULT hr = S_OK;
-    IMMDeviceEnumerator* pEnumerator = NULL;
-    IMMDeviceCollection* pCollection = NULL;
-    IMMDevice* pEndpoint = NULL;
-    IPropertyStore* pProps = NULL;
-    LPWSTR pwszID = NULL;
-
-    hr = CoCreateInstance(
-        CLSID_MMDeviceEnumerator, NULL,
-        CLSCTX_ALL, IID_IMMDeviceEnumerator,
-        (void**)&pEnumerator);
-    EXIT_ON_ERROR(hr)
-
-        hr = pEnumerator->EnumAudioEndpoints(
-            eCapture, DEVICE_STATE_ACTIVE,
-            &pCollection);
-    EXIT_ON_ERROR(hr)
-
-        UINT  count;
-    hr = pCollection->GetCount(&count);
-    EXIT_ON_ERROR(hr)
-
-        if (count == 0)
-        {
-            printf("No endpoints found.\n");
-        }
-
-    // Each loop prints the name of an endpoint device.
-    for (ULONG i = 0; i < count; i++)
-    {
-        // Get pointer to endpoint number i.
-        hr = pCollection->Item(i, &pEndpoint);
-        EXIT_ON_ERROR(hr)
-
-            // Get the endpoint ID string.
-            hr = pEndpoint->GetId(&pwszID);
-        EXIT_ON_ERROR(hr)
-
-            hr = pEndpoint->OpenPropertyStore(
-                STGM_READ, &pProps);
-        EXIT_ON_ERROR(hr)
-
-            PROPVARIANT varName;
-        // Initialize container for property value.
-        PropVariantInit(&varName);
-
-        // Get the endpoint's friendly-name property.
-        hr = pProps->GetValue(
-            PKEY_Device_FriendlyName, &varName);
-        EXIT_ON_ERROR(hr)
-
-            // Print endpoint friendly name and endpoint ID.
-            printf("Endpoint %d: \"%S\" (%S)\n",
-                i, varName.pwszVal, pwszID);
-
-        if (wcsstr(varName.bstrVal, L"C615") != NULL)
-        {
-            printf("HUZZAH!!");
-            CComPtr<IAudioEndpointVolume> endpointVolume;
-            hr = pEndpoint->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume);
-
-            BOOL isMuted;
-            hr = endpointVolume->GetMute(&isMuted);
-            if (FAILED(hr)) {
-                std::cout << "GetId failed, hr = " << std::hex << hr;
-                return;
-            }
-
-            std::cout << "Is muted? " << isMuted << std::endl;
-
-            hr = endpointVolume->SetMute(!isMuted, NULL);
-            if (FAILED(hr)) {
-                std::cout << "SetMute failed, hr = " << std::hex << hr;
-                return;
-            }
-        }
-
-        CoTaskMemFree(pwszID);
-        pwszID = NULL;
-        PropVariantClear(&varName);
-        SAFE_RELEASE(pProps)
-            SAFE_RELEASE(pEndpoint)
+    if (FAILED(hr)) {
+        std::cout << errorMessage.c_str() << ", HRESULT = " << std::hex << hr;
+        std::exit(1);
     }
-    SAFE_RELEASE(pEnumerator)
-        SAFE_RELEASE(pCollection)
-        return;
-
-Exit:
-    printf("Error!\n");
-    CoTaskMemFree(pwszID);
-    SAFE_RELEASE(pEnumerator)
-        SAFE_RELEASE(pCollection)
-        SAFE_RELEASE(pEndpoint)
-        SAFE_RELEASE(pProps)
 }
 
-int GetCaptureId()
+int ToggleMuteOnDefaultCaptureDevice()
 {
     HRESULT hr;
 
     CComPtr<IMMDeviceEnumerator> deviceEnumerator;
     hr = deviceEnumerator.CoCreateInstance(__uuidof(MMDeviceEnumerator));
-    if (FAILED(hr)) {
-        std::cout << "CoCreateInstance failed, hr = " << std::hex << hr;
-        return 1;
-    }
+    ExitWithErrorIfFailed(hr, L"CoCreateInstance failed");
 
     CComPtr<IMMDevice> defaultDevice;
     hr = deviceEnumerator->GetDefaultAudioEndpoint(eCapture, eConsole, &defaultDevice);
-    if (FAILED(hr)) {
-        std::cout << "GetDefaultAudioEndpoint failed, hr = " << std::hex << hr;
-        return 2;
-    }
+    ExitWithErrorIfFailed(hr, L"GetDefaultAudioEndpoint failed");
 
     WCHAR* deviceId;
     hr = defaultDevice->GetId(&deviceId);
-    if (FAILED(hr)) {
-        std::cout << "GetId failed, hr = " << std::hex << hr;
-        return 3;
-    }
-
+    ExitWithErrorIfFailed(hr, L"GetId failed");
     std::cout << "Default device id: " << deviceId << std::endl;
     CoTaskMemFree(deviceId);
 
     CComPtr<IAudioEndpointVolume> endpointVolume;
     hr = defaultDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL, (LPVOID*)&endpointVolume);
+    ExitWithErrorIfFailed(hr, L"Getting IAudioEndpointVolume failed");
 
     BOOL isMuted;
     hr = endpointVolume->GetMute(&isMuted);
-    if (FAILED(hr)) {
-        std::cout << "GetId failed, hr = " << std::hex << hr;
-        return 4;
-    }
+    ExitWithErrorIfFailed(hr, L"GetMute failed");
 
     std::cout << "Is muted? " << isMuted << std::endl;
 
     hr = endpointVolume->SetMute(!isMuted, NULL);
-    if (FAILED(hr)) {
-        std::cout << "SetMute failed, hr = " << std::hex << hr;
-        return 5;
-    }
+    ExitWithErrorIfFailed(hr, L"SetMute failed");
 
     return 0;
 }
@@ -178,8 +172,7 @@ int main()
         return 1;
     }
 
-    PrintEndpointNames();
-    // GetCaptureId();
+    ToggleMuteOnDefaultCaptureDevice();
 
     CoUninitialize();
 
